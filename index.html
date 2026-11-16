@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Produção | Consultar Cards</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <div class="brand-copy">
+          <strong>Ensino Digital</strong>
+          <span>Painel de produção</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-view="overview"><span>◫</span> Visão geral</button>
+        <button class="nav-item" data-view="pipeline"><span>▥</span> Panorama da Esteira</button>
+        <button class="nav-item" data-view="cards"><span>▦</span> Consultar cards</button>
+        <button class="nav-item" data-view="productivity"><span>⌁</span> Produtividade</button>
+        <button class="nav-item" data-view="person"><span>☺</span> Pessoa</button>
+        <div class="nav-section-label">OPERAÇÕES</div>
+        <button class="nav-item" data-view="operations"><span>◈</span> Acompanhamento Operações</button>
+        <button class="nav-item" data-view="operationsProductivity"><span>⌁</span> Produtividade Operações</button>
+        <button class="nav-item" data-view="operationsTasks"><span>▦</span> Consultar demandas</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <small>Base carregada</small>
+        <strong id="sidebarFileName">Nenhum CSV</strong>
+        <span id="sidebarRowCount">0 registros</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn" id="toggleSidebar" title="Recolher menu">☰</button>
+        <div>
+          <h1 id="pageTitle">Visão geral</h1>
+          <p id="pageSubtitle">A base dados.csv será carregada automaticamente. O upload manual permanece disponível para testes.</p>
+        </div>
+        <div class="topbar-update" id="lastUpdate" title="Data da última atualização do arquivo de dados">Última atualização: —</div>
+        <div class="topbar-actions">
+          <label class="upload-btn" for="csvFile">Carregar CSV</label>
+          <input id="csvFile" type="file" accept=".csv,text/csv" hidden />
+          <button class="outline-btn" id="resetFilters">Limpar filtros</button>
+        </div>
+      </header>
+
+      <section class="dropzone" id="dropzone">
+        <div class="drop-icon">⇧</div>
+        <div>
+          <strong>Carregando dados.csv automaticamente</strong>
+          <span>Para atualizar no servidor, substitua o arquivo dados.csv na mesma pasta. Você também pode carregar outro CSV manualmente para teste.</span>
+        </div>
+      </section>
+
+      <section class="filter-panel" id="filterPanel">
+        <div class="filter-head">
+          <div>
+            <strong>Filtros</strong>
+            <span id="filterSummary">Nenhum filtro aplicado</span>
+          </div>
+          <button class="text-btn" id="toggleFilters">Recolher</button>
+        </div>
+        <div class="filters-grid" id="filtersGrid">
+          <label class="field field-search">
+            <span>Buscar card</span>
+            <input id="filterSearch" type="search" placeholder="Nome, código, responsável..." />
+          </label>
+          <label class="field">
+            <span>Status</span>
+            <select id="filterStatus"><option value="">Todos</option></select>
+          </label>
+          <label class="field">
+            <span>Área</span>
+            <select id="filterArea"><option value="">Todas</option></select>
+          </label>
+          <label class="field">
+            <span>Etapa atual</span>
+            <select id="filterStage"><option value="">Todas</option></select>
+          </label>
+          <label class="field">
+            <span>Responsável</span>
+            <select id="filterResponsible"><option value="">Todos</option></select>
+          </label>
+          <label class="field">
+            <span>Etiqueta</span>
+            <select id="filterLabel"><option value="">Todas</option></select>
+          </label>
+          <label class="field">
+            <span>Nível</span>
+            <select id="filterLevel"><option value="">Todos</option></select>
+          </label>
+          <label class="field">
+            <span>Produto</span>
+            <select id="filterProduct"><option value="">Todos</option></select>
+          </label>
+          <label class="field">
+            <span>Unidade/Vídeo</span>
+            <select id="filterUnit"><option value="">Todos</option></select>
+          </label>
+          <label class="field">
+            <span>Produção</span>
+            <select id="filterProduction"><option value="">Todas</option></select>
+          </label>
+          <label class="field">
+            <span>Código</span>
+            <select id="filterCode"><option value="">Todos</option></select>
+          </label>
+          <label class="field">
+            <span>A partir de</span>
+            <input id="filterStart" type="date" />
+          </label>
+          <label class="field">
+            <span>Até</span>
+            <input id="filterEnd" type="date" />
+          </label>
+        </div>
+      </section>
+
+      <section class="view active" id="view-overview">
+        <div class="kpis" id="kpis">
+          <article class="kpi"><span>Cards filtrados</span><strong id="kpiTotal">0</strong><small id="kpiTotalHint">0% da base</small></article>
+          <article class="kpi"><span>Em andamento</span><strong id="kpiActive">0</strong><small id="kpiActiveHint">0 ativos</small></article>
+          <article class="kpi"><span>Finalizados</span><strong id="kpiFinished">0</strong><small id="kpiFinishedHint">0% do recorte</small></article>
+          <article class="kpi"><span>Minutos registrados</span><strong id="kpiHours">0 min</strong><small id="kpiHoursHint">Soma das etapas</small></article>
+          <article class="kpi"><span>Tempo médio / etapa</span><strong id="kpiAvg">0h</strong><small id="kpiAvgHint">Etapas com início e fim</small></article>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="panel span-2">
+            <div class="panel-head"><div><h2>Cards por etapa atual</h2><p>Distribuição do recorte filtrado</p></div></div>
+            <div class="chart-wrap"><canvas id="chartStages"></canvas></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><h2>Distribuição por área</h2><p>Conteúdo, Estúdio e Outros</p></div></div>
+            <div class="chart-wrap donut"><canvas id="chartArea"></canvas></div>
+          </article>
+          <article class="panel span-2">
+            <div class="panel-head"><div><h2>Minutos por responsável</h2><p>Top 10 no recorte atual</p></div></div>
+            <div class="chart-wrap"><canvas id="chartHours"></canvas></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><h2>Leitura rápida</h2><p>Principais sinais do recorte</p></div></div>
+            <div class="insights" id="quickInsights"></div>
+          </article>
+          <article class="panel span-3">
+            <div class="panel-head"><div><h2>Produção ao longo do tempo</h2><p id="timelineSubtitle">Etapas concluídas por dia · mês atual</p></div></div>
+            <div class="chart-wrap line"><canvas id="chartTimeline"></canvas></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" id="view-pipeline">
+        <div class="pipeline-kpis">
+          <article class="kpi"><span>Tarefas mapeadas</span><strong id="pipeTotal">0</strong><small>Unidades, vídeos e BDQs</small></article>
+          <article class="kpi"><span>Finalizadas</span><strong id="pipeFinished">0</strong><small id="pipeFinishedHint">0% concluído</small></article>
+          <article class="kpi"><span>Pendentes</span><strong id="pipePending">0</strong><small>Ainda na esteira</small></article>
+          <article class="kpi"><span>Em produção</span><strong id="pipeProduction">0</strong><small>Em execução agora</small></article>
+          <article class="kpi"><span>Frentes completas</span><strong id="pipeComplete">0</strong><small id="pipeCompleteHint">0 de 0</small></article>
+        </div>
+        <article class="panel pipeline-panel">
+          <div class="panel-head"><div><h2>Andamento das entregas</h2><p>Veja rapidamente o que terminou, o que falta e onde estão as pendências.</p></div></div>
+          <div class="pipeline-legend"><span><i class="dot done"></i>Finalizadas</span><span><i class="dot pending"></i>Pendentes</span><span><i class="dot working"></i>Em produção</span></div>
+          <div class="pipeline-grid" id="pipelineGrid"></div>
+        </article>
+      </section>
+
+      <section class="view" id="view-cards">
+        <article class="panel table-panel">
+          <div class="panel-head table-head">
+            <div><h2>Consultar Cards</h2><p id="tableCount">0 registros encontrados</p></div>
+            <div class="table-actions">
+              <select id="pageSize" title="Linhas por página"><option>25</option><option>50</option><option>100</option></select>
+              <button class="outline-btn" id="exportFiltered">Exportar filtrados</button>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Status</th><th>Nome do card</th><th>Código</th><th>Última etapa</th><th>Responsáveis</th><th>Etiquetas</th><th>Última modificação</th><th>Trello</th></tr></thead>
+              <tbody id="cardsTableBody"></tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <button id="prevPage">← Anterior</button><span id="pageInfo">Página 1 de 1</span><button id="nextPage">Próxima →</button>
+          </div>
+        </article>
+      </section>
+
+      <section class="view" id="view-productivity">
+        <article class="panel productivity-panel productivity-focus">
+          <div class="panel-head table-head">
+            <div><h2>Métrica diária por pessoa</h2><p>Entregas concluídas por pessoa usando as datas de início e fim de cada área.</p></div>
+            <div class="productivity-head-actions">
+              <div class="productivity-period">
+                <label><span>De</span><input id="productivityStart" type="date" /></label>
+                <label><span>Até</span><input id="productivityEnd" type="date" /></label>
+              </div>
+              <div class="quick-range" data-start="productivityStart" data-end="productivityEnd"><button type="button" data-r="today">Hoje</button><button type="button" data-r="week">Esta semana</button><button type="button" data-r="7d">7 dias</button><button type="button" data-r="month">Mês</button></div>
+              <div class="productivity-export-actions">
+                <button class="outline-btn" id="toggleAvail">Ver disponíveis na etapa</button>
+                <button class="outline-btn" id="exportProductivityData">Exportar dados</button>
+                <button class="primary-btn" id="exportProductivitySlide">Exportar slide PNG</button>
+              </div>
+            </div>
+          </div>
+          <div class="productivity-layout">
+            <aside class="people-filter">
+              <div class="people-filter-head"><strong>Pessoas</strong><div><button class="text-btn" id="selectAllPeople">Todas</button><button class="text-btn" id="clearPeople">Limpar</button></div></div>
+              <div id="productivityPeople" class="people-picker"></div>
+            </aside>
+            <div class="productivity-main">
+              <div class="mini-kpis">
+                <div><span>Etapas concluídas</span><strong id="prodCompleted">0</strong></div>
+                <div><span>Média / dia ativo</span><strong id="prodPerDay">0</strong></div>
+                <div><span>Minutos registrados</span><strong id="prodHours">0 min</strong></div>
+                <div><span>Pessoas selecionadas</span><strong id="prodPeopleCount">0</strong></div>
+              </div>
+              <div class="chart-wrap productivity-chart"><canvas id="chartProductivityDaily"></canvas></div>
+            </div>
+          </div>
+        </article>
+
+
+        <article class="panel avail-panel" id="availPanel" hidden>
+          <div class="panel-head table-head">
+            <div><h2>Disponível na etapa</h2><p id="availSubtitle">Cards na fila ou em produção na etapa escolhida, comparados ao que as pessoas selecionadas já entregaram.</p></div>
+            <div class="productivity-head-actions">
+              <label class="inline-field"><span>Etapa</span><select id="availStage"></select></label>
+              <label class="inline-field"><span>Nível</span><select id="availLevel"><option value="">Todos</option><option>Graduação</option><option>Pós</option></select></label>
+            </div>
+          </div>
+          <div class="mini-kpis">
+            <div><span>Concluídas (selecionados, período)</span><strong id="availDone">0</strong></div>
+            <div><span>Disponíveis na fila</span><strong id="availQueue">0</strong></div>
+            <div><span>Em produção / validação</span><strong id="availProd">0</strong></div>
+            <div><span>Total na etapa</span><strong id="availTotal">0</strong></div>
+          </div>
+          <div class="table-scroll productivity-detail-scroll"><table>
+            <thead><tr><th>Situação</th><th>Card</th><th>Código</th><th>Nível</th><th>Lista atual</th><th>Responsável da etapa</th><th>Dias sem mov.</th></tr></thead>
+            <tbody id="availBody"></tbody></table></div>
+        </article>
+
+        <div class="productivity-breakdown-grid">
+          <article class="panel">
+            <div class="panel-head"><div><h2>Conclusões por Unidade / Vídeo / BDQ</h2><p>Quantitativo finalizado de cada entrega no período selecionado</p></div></div>
+            <div class="chart-wrap productivity-breakdown"><canvas id="chartProductivityStages"></canvas></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><h2>Conclusões por tipo</h2><p>Unidade, Vídeo, Banco de questões e demais produções</p></div></div>
+            <div class="chart-wrap productivity-breakdown"><canvas id="chartProductivityTypes"></canvas></div>
+          </article>
+        </div>
+
+        <article class="panel productivity-detail-panel">
+          <div class="panel-head table-head">
+            <div><h2>Detalhamento das conclusões</h2><p id="productivityDetailCount">0 conclusões no período</p></div>
+          </div>
+          <div class="table-scroll productivity-detail-scroll">
+            <table>
+              <thead><tr><th>Data</th><th>Pessoa</th><th>Etapa concluída</th><th>Tipo</th><th>Nível</th><th>Unidade/Vídeo</th><th>Código</th><th>Card</th><th>Minutos</th></tr></thead>
+              <tbody id="productivityDetailBody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel productivity-summary-panel">
+          <div class="panel-head"><div><h2>Resumo por pessoa</h2><p>Volume, dias ativos, média e minutos no período</p></div></div>
+          <div class="table-scroll compact-table">
+            <table><thead><tr><th>Pessoa</th><th>Etapas concluídas</th><th>Dias com entrega</th><th>Média / dia ativo</th><th>Minutos</th><th>Em produção agora</th></tr></thead><tbody id="productivityTableBody"></tbody></table>
+          </div>
+        </article>
+      </section>
+
+            <section class="view" id="view-person">
+        <article class="panel productivity-panel">
+          <div class="panel-head table-head">
+            <div><h2>Rastreio por pessoa</h2><p>Tudo o que cada pessoa iniciou e concluiu no período, em ordem cronológica.</p></div>
+            <div class="productivity-head-actions">
+              <div class="quick-range" data-start="personStart" data-end="personEnd"><button type="button" data-r="today">Hoje</button><button type="button" data-r="week">Esta semana</button><button type="button" data-r="7d">7 dias</button><button type="button" data-r="month">Mês</button></div>
+              <div class="productivity-period">
+                <label><span>De</span><input id="personStart" type="date" /></label>
+                <label><span>Até</span><input id="personEnd" type="date" /></label>
+              </div>
+            </div>
+          </div>
+          <div class="productivity-layout">
+            <aside class="people-filter">
+              <div class="people-filter-head"><strong>Pessoas</strong><div><button class="text-btn" id="personClear">Limpar</button></div></div>
+              <input id="personSearch" class="people-search" type="search" placeholder="Buscar pessoa..." />
+              <div id="personPeople" class="people-picker"></div>
+            </aside>
+            <div class="productivity-main">
+              <div class="mini-kpis">
+                <div><span>Concluídas</span><strong id="perDone">0</strong></div>
+                <div><span>Minutos registrados</span><strong id="perMin">0 min</strong></div>
+                <div><span>Dias ativos</span><strong id="perDays">0</strong></div>
+                <div><span>Em produção agora</span><strong id="perNow">0</strong></div>
+              </div>
+              <div class="chart-wrap productivity-chart"><canvas id="chartPersonDaily"></canvas></div>
+            </div>
+          </div>
+        </article>
+        <div id="personResults" class="person-results"></div>
+      </section>
+
+      <div id="opsShared" style="display:none">
+<article class="panel ops-source-panel">
+          <div class="panel-head ops-source-head">
+            <div><h2>Fonte do Planner</h2><p id="opsSourceInfo">Carregando operacoes.xlsx automaticamente...</p></div>
+            <div class="table-actions">
+              <label class="upload-btn" for="opsFile">Carregar XLSX</label>
+              <input id="opsFile" type="file" accept=".xlsx,.xls" hidden />
+              <span class="ops-updated" id="opsLastUpdate">Planner: —</span>
+            </div>
+          </div>
+        </article>
+
+        <section class="ops-filter-panel">
+          <div class="filter-head"><div><strong>Filtros de Operações</strong><span id="opsFilterSummary">Todas as datas</span></div><div class="quick-range" data-start="opsStart" data-end="opsEnd"><button type="button" data-r="today">Hoje</button><button type="button" data-r="week">Esta semana</button><button type="button" data-r="7d">7 dias</button><button type="button" data-r="month">Mês</button></div><button class="text-btn" id="opsResetFilters">Limpar</button></div>
+          <div class="ops-filters-grid">
+            <label class="field field-search"><span>Buscar demanda</span><input id="opsSearch" type="search" placeholder="Nome, notas, rótulo..." /></label>
+            <label class="field"><span>Categoria / Bucket</span><select id="opsCategory"><option value="">Todas</option></select></label>
+            <label class="field"><span>Demanda</span><select id="opsDemand"><option value="">Todas</option></select></label>
+            <label class="field"><span>Status</span><select id="opsStatus"><option value="">Todos</option></select></label>
+            <label class="field"><span>Responsável</span><select id="opsResponsible"><option value="">Todos</option></select></label>
+            <label class="field"><span>Prioridade</span><select id="opsPriority"><option value="">Todas</option></select></label>
+            <label class="field"><span>De</span><input id="opsStart" type="date" /></label>
+            <label class="field"><span>Até</span><input id="opsEnd" type="date" /></label>
+          </div>
+        </section>
+
+        </div>
+
+      <section class="view" id="view-operations">
+        <div class="ops-kpis">
+          <article class="kpi"><span>Demandas abertas</span><strong id="opsKpiOpen">0</strong><small>Fila atual</small></article>
+          <article class="kpi"><span>Sem responsável</span><strong id="opsKpiUnassigned">0</strong><small>Abertas sem atribuição</small></article>
+          <article class="kpi"><span>Atrasadas</span><strong id="opsKpiLate">0</strong><small>Abertas com atraso</small></article>
+          <article class="kpi"><span>Entradas no período</span><strong id="opsKpiCreated">0</strong><small id="opsKpiCreatedHint">Criadas no período</small></article>
+          <article class="kpi"><span>Finalizadas no período</span><strong id="opsKpiDone">0</strong><small id="opsKpiDoneHint">Concluídas no período</small></article>
+          <article class="kpi"><span>Saldo do período</span><strong id="opsKpiBalance">0</strong><small>Entradas − finalizadas</small></article>
+        </div>
+
+        <div class="ops-dashboard-grid">
+          <article class="panel span-2"><div class="panel-head"><div><h2>Fila atual por categoria</h2><p>Onde estão as demandas ainda abertas</p></div></div><div class="chart-wrap tall"><canvas id="opsChartBuckets"></canvas></div></article>
+          <article class="panel"><div class="panel-head"><div><h2>Carga por responsável</h2><p>Demandas abertas atribuídas</p></div></div><div class="chart-wrap tall"><canvas id="opsChartWorkload"></canvas></div></article>
+          <article class="panel span-2"><div class="panel-head"><div><h2>Chamados por demanda</h2><p>Volume de ocorrências pelo nome identificado após “|”</p></div></div><div class="chart-wrap tall"><canvas id="opsChartDemandTypes"></canvas></div></article>
+          <article class="panel"><div class="panel-head"><div><h2>Demandas em aberto</h2><p>Onde há maior concentração de pendências</p></div></div><div class="chart-wrap tall"><canvas id="opsChartDemandOpen"></canvas></div></article>
+          <article class="panel span-3"><div class="panel-head"><div><h2>Entradas × finalizações</h2><p id="opsFlowSubtitle">Movimentação diária no período</p></div></div><div class="chart-wrap line"><canvas id="opsChartFlow"></canvas></div></article>
+          <article class="panel span-3"><div class="panel-head table-head"><div><h2>Demandas abertas</h2><p id="opsOpenCount">0 demandas</p></div></div><div class="table-scroll"><table><thead><tr><th>Status</th><th>Tarefa</th><th>Demanda</th><th>Categoria</th><th>Responsável</th><th>Prioridade</th><th>Criada em</th><th>Atraso</th><th>Link</th></tr></thead><tbody id="opsOpenTableBody"></tbody></table></div></article>
+          <article class="panel span-3"><div class="panel-head table-head"><div><h2>Quem está tratando cada demanda</h2><p>Somente demandas identificadas por nome · responsáveis e volume por tipo de chamado</p></div></div><div class="table-scroll"><table><thead><tr><th>Demanda</th><th>Total</th><th>Abertas</th><th>Finalizadas</th><th>Principais responsáveis</th></tr></thead><tbody id="opsDemandPeopleBody"></tbody></table></div></article>
+        </div>
+      </section>
+
+      <section class="view" id="view-operationsProductivity">
+        <div class="ops-kpis four">
+          <article class="kpi"><span>Conclusões no período</span><strong id="opsProdDone">0</strong><small>Equipe selecionada</small></article>
+          <article class="kpi"><span>Pessoas com entrega</span><strong id="opsProdPeople">0</strong><small>Colaboradores ativos</small></article>
+          <article class="kpi"><span>Média / dia ativo</span><strong id="opsProdAvg">0</strong><small>Conclusões por dia com entrega</small></article>
+          <article class="kpi"><span>Maior volume</span><strong id="opsProdTop">—</strong><small id="opsProdTopHint">0 conclusões</small></article>
+        </div>
+        <div class="ops-dashboard-grid">
+          <article class="panel span-2"><div class="panel-head"><div><h2>Conclusões por pessoa</h2><p>Volume concluído no período</p></div></div><div class="chart-wrap tall"><canvas id="opsChartPeopleDone"></canvas></div></article>
+          <article class="panel"><div class="panel-head"><div><h2>Conclusões por categoria</h2><p>Tipos de demanda entregues</p></div></div><div class="chart-wrap tall"><canvas id="opsChartDoneCategory"></canvas></div></article>
+          <article class="panel span-3"><div class="panel-head"><div><h2>Produção diária da equipe</h2><p>Conclusões registradas por dia</p></div></div><div class="chart-wrap line"><canvas id="opsChartDailyDone"></canvas></div></article>
+          <article class="panel span-3"><div class="panel-head table-head"><div><h2>Métrica por pessoa</h2><p>Conclusões, dias ativos e fila atual</p></div></div><div class="table-scroll"><table><thead><tr><th>Colaborador</th><th>Concluídas</th><th>Dias com entrega</th><th>Média/dia ativo</th><th>Abertas atuais</th><th>Atrasadas</th></tr></thead><tbody id="opsPeopleTableBody"></tbody></table></div></article>
+        </div>
+      
+        <div class="ops-dashboard-grid">
+          <article class="panel span-3"><div class="panel-head"><div><h2>Conclusões por demanda</h2><p>Tipos de chamado entregues no período</p></div></div><div class="chart-wrap tall"><canvas id="opsChartDoneDemand"></canvas></div></article>
+          <article class="panel span-3"><div class="panel-head table-head"><div><h2>Detalhamento das conclusões</h2><p id="opsProdDetailCount">0 conclusões</p></div></div><div class="table-scroll productivity-detail-scroll"><table><thead><tr><th>Concluída em</th><th>Colaborador</th><th>Tarefa</th><th>Demanda</th><th>Categoria</th><th>Link</th></tr></thead><tbody id="opsProdDetailBody"></tbody></table></div></article>
+        </div>
+      </section>
+
+      <section class="view" id="view-operationsTasks">
+        <article class="panel table-panel">
+          <div class="panel-head table-head"><div><h2>Consultar demandas do Planner</h2><p id="opsTasksCount">0 registros</p></div><div class="table-actions"><select id="opsPageSize"><option>25</option><option>50</option><option>100</option></select><button class="outline-btn" id="opsExport">Exportar filtrados</button></div></div>
+          <div class="table-scroll"><table><thead><tr><th>Status</th><th>Tarefa</th><th>Demanda</th><th>Categoria</th><th>Responsável</th><th>Prioridade</th><th>Criada em</th><th>Concluída em</th><th>Atraso</th><th>Link</th></tr></thead><tbody id="opsTasksTableBody"></tbody></table></div>
+          <div class="pagination"><button id="opsPrevPage">← Anterior</button><span id="opsPageInfo">Página 1 de 1</span><button id="opsNextPage">Próxima →</button></div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="cardModal" class="modal">
+    <div class="modal-head"><div><small id="modalStatus"></small><h2 id="modalTitle">Card</h2></div><button id="closeModal" class="icon-btn">×</button></div>
+    <div class="modal-meta" id="modalMeta"></div>
+    <div class="modal-section"><h3>Etiquetas</h3><div class="tags" id="modalLabels"></div></div>
+    <div class="modal-section"><h3>Histórico das etapas</h3><div class="timeline-list" id="modalTimeline"></div></div>
+    <div class="modal-section"><h3>Descrição do card</h3><p id="modalDescription" class="description"></p></div>
+    <div class="modal-footer"><a id="modalTrello" class="upload-btn" target="_blank" rel="noopener">Abrir no Trello</a></div>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
