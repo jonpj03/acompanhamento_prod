@@ -839,3 +839,5 @@ async function autoLoadData(){
 
 Chart.defaults.font.family='Inter, system-ui, sans-serif';Chart.defaults.color='#696d77';
 wireEvents();autoLoadData();opsLoadFromUrl();
+// Recarrega dados.csv e operacoes.xlsx a cada 3h para quem deixa o painel aberto
+setInterval(()=>{autoLoadData();opsLoadFromUrl();},3*60*60*1000);
