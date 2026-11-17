@@ -2,8 +2,11 @@ name: Atualizar dados do Trello
 
 on:
   schedule:
-    - cron: "0 */3 * * *"
-  workflow_dispatch:
+    # Horário de trabalho (seg-sáb, ~07h às 19h30 em Brasília = UTC-3): a cada 30 min
+    - cron: "7,37 10-22 * * 1-6"
+    # Demais horários: a cada 3 horas
+    - cron: "23 */3 * * *"
+  workflow_dispatch:         # botão "Run workflow" para atualizar na hora
 
 permissions:
   contents: write
@@ -25,7 +28,7 @@ jobs:
           TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
           TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
-        run: python trello_to_csv.py
+        run: python scripts/trello_to_csv.py
       - name: Publicar se houve mudança
         run: |
           if git diff --quiet -- dados.csv; then echo "Sem mudanças"; exit 0; fi
