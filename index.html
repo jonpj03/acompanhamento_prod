@@ -46,6 +46,7 @@
         </div>
         <div class="topbar-update" id="lastUpdate" title="Data da última atualização do arquivo de dados">Última atualização: —</div>
         <div class="topbar-actions">
+          <div class="sem-switch" id="semSwitch" title="Semestre exibido"></div>
           <label class="upload-btn" for="csvFile">Carregar CSV</label>
           <input id="csvFile" type="file" accept=".csv,text/csv" hidden />
           <button class="outline-btn" id="resetFilters">Limpar filtros</button>
@@ -92,6 +93,10 @@
           <label class="field">
             <span>Etiqueta</span>
             <select id="filterLabel"><option value="">Todas</option></select>
+          </label>
+          <label class="field">
+            <span>Quadro</span>
+            <select id="filterBoard"><option value="">Todos</option></select>
           </label>
           <label class="field">
             <span>Nível</span>

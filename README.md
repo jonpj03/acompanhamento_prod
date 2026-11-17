@@ -175,3 +175,16 @@ Na tabela **Quem está tratando cada demanda**, são exibidas apenas demandas co
 - Filtros (busca, categoria, demanda, status, responsável, prioridade, período) fixos no topo das 3 telas.
 - *Produtividade Operações* ganhou conclusões por demanda e detalhamento com link.
 - **Links das demandas**: o export do Planner não traz URL; o link é montado com o ID do plano (aba *Plano*) e o ID da tarefa pelo modelo `OPS_TASK_URL` no topo do `app.js`. Se o seu tenant usar outro padrão, ajuste só essa constante.
+
+
+## Atualização v3 — semestres 2026/2 e 2027/1
+
+- **Botão de semestre** no topo (2026/2 | 2027/1). O semestre **mais recente abre sempre por padrão**; o anterior continua disponível. A lista fica em `SEMESTERS` no `app.js` (o primeiro item é o mais recente). Para o próximo semestre, basta adicionar um item no topo.
+- **2027/1** junta dois quadros do Trello: `dados_2027_1_conteudo.csv` e `dados_2027_1_video.csv`, com o filtro **Quadro** (Conteúdo / Vídeo). Se um dos arquivos faltar, o painel usa o outro e avisa.
+- **Regras do 2027/1**
+  - `00 DEMANDA...` = **Backlog** (conta no total e nas pendências, mas não em "Em andamento").
+  - `07 PUBLICADO` = Finalizado. `02 LIBERADO PARA VALIDAÇÃO` = fila (espera).
+  - Ignorados: `00 MODELOS`, cards fora do padrão `GRD27.1_TIPO_U#/V#/PE_...` e **arquivados sem nenhuma etapa registrada**. Arquivados com produção contam como Finalizados. O total ignorado aparece no subtítulo.
+  - Tipos: `U#` Unidade, `V#` Vídeo, `BDQ`, `PE` Plano de ensino. Formato (filtro *Produção*): Podcast (`POD`), Prática em evidência (`PEV`), Dúvida (`EDUV`), Vídeo de tema (`T#`).
+  - Áreas: Qualidade 1/2, DI e Revisão = Conteúdo (inclusive no quadro Vídeo); DG, Roteiro, Gravação e Edição = Estúdio; Web = Web; Pendência e Extras = Outros. **Auditorias não entram** nas métricas. Etapas de espera não geram minutos.
+- **Robô**: `scripts/trello_to_csv.py` sincroniza os 3 quadros (2026/2, 2027/1 Conteúdo e 2027/1 Vídeo). Os IDs estão no script e podem ser sobrescritos por `TRELLO_BOARD_ID_2027_CONT` e `TRELLO_BOARD_ID_2027_VIDEO`. Um quadro com problema não impede a atualização dos outros.

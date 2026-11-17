@@ -267,3 +267,7 @@ tbody tr:hover { background: #fbf4f7; }
 .tl-kind{font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;text-align:center}.tl-kind.done{background:#e3f2ea;color:#1f7a4d}.tl-kind.start{background:#fdf1dc;color:#9a6512}
 .tl-now{background:#fafafa;border:1px dashed var(--line);border-radius:10px;padding:8px;margin-bottom:8px}.tl-now strong{font-size:11px}
 @media(max-width:760px){.tl-row{grid-template-columns:44px 70px 1fr}.tl-row>:nth-child(n+4){grid-column:1/-1}}
+
+.sem-switch{display:inline-flex;background:#f4f4f6;border-radius:11px;padding:3px;gap:2px}
+.sem-switch button{border:0;background:transparent;padding:8px 14px;border-radius:9px;font-size:12px;font-weight:800;color:#555b66;cursor:pointer}
+.sem-switch button.on{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}

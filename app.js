@@ -1,7 +1,7 @@
 'use strict';
 
 const ACCENT = '#d51862';
-const STAGE_MAP = [
+const STAGE_MAP_V1 = [
   { key:'QLD 01', start:'DT INÍCIO QLD 01', end:'DT FIM QLD 01', person:'QUALIDADE 01', label:'Qualidade 01', area:'Conteúdo' },
   { key:'QLD 02', start:'DT INÍCIO QLD 02', end:'DT FIM QLD 02', person:'QUALIDADE 02', label:'Qualidade 02', area:'Conteúdo' },
   { key:'DI', start:'DT INÍCIO DI', end:'DT FIM DI', person:'DI', label:'DI', area:'Conteúdo' },
@@ -17,11 +17,39 @@ const STAGE_MAP = [
   { key:'TST CONTEÚDO', start:'DT INÍCIO TST CONTEÚDO', end:'DT FIM TST CONTEÚDO', person:'TESTER CONTEÚDO', label:'Tester Conteúdo', area:'Conteúdo' },
   { key:'EXT 01', start:'DT INÍCIO EXT 01', end:'DT FIM EXT O1', person:'EXTRA 01', label:'Extra 01', area:'Outros' }
 ];
+// 2027/1: etapas numeradas dos quadros Conteúdo e Vídeo (colunas com espaços normalizados). Auditorias ficam de fora de propósito.
+const mk=(key,label,area,start,end,person,wait)=>({key,label,area,start,end,person:person||'__sem_resp__',wait:!!wait});
+const STAGE_MAP_V2 = [
+  mk('QUAL1','Qualidade 1','Conteúdo','01 DT INÍC QUAL1','01 DT CONC QUAL1','01 RESP QUAL1'),
+  mk('AGUARD CONT','Aguardando conteudista/curador','Conteúdo','01 DT INÍC AGUARDANDO CONT/CUR','01 DT CONC AGUARDANDO CONT/CUR','',true),
+  mk('QUAL2','Qualidade 2','Conteúdo','02 DT INÍC QUAL2','02 DT CONC QUAL 2','02 RESP QUAL2'),
+  mk('DI','DI','Conteúdo','03 DT INÍC DI','03 DT CONC DI','03 RESP DI'),
+  mk('REV','Revisão','Conteúdo','04 DT INÍC REVISÃO','04 DT CONC REVISÃO','04 RESP REVISÃO'),
+  mk('DG','Design Gráfico','Estúdio','05 DT INÍC DG','05 DT CONC DG','05 RESP DG'),
+  mk('WEB','Web','Web','06 DT INÍC WEB','06 DT CONC WEB','06 RESP WEB'),
+  mk('PENDÊNCIA','Pendência','Outros','DT INÍC PENDÊNCIA','DT CONC PENDÊNCIA','PENDÊNCIA'),
+  mk('EXTRA 01','Extra 01','Outros','DT INÍC EXTRA 01','DT CONC EXTRA 01','RESP EXTRA 01'),
+  mk('EXTRA 02','Extra 02','Outros','DT INÍC EXTRA 02','DT CONC EXTRA 02','RESP EXTRA 02'),
+  mk('V ROTEIRO','Roteiro','Estúdio','01 DT INÍC ROTEIRO','01 DT CONC ROTEIRO','01 RESP ROTEIRO'),
+  mk('V LIB VALID','Liberado p/ validação','Estúdio','02 DT INÍC LIB VALID','02 DT CONC LIB VALID','',true),
+  mk('V AGUARD GRAV','Aguardando gravação','Estúdio','03.1 DT INÍC AGUAD GRAV','03.1 DT CONC AGUAD GRAV','',true),
+  mk('V GRAVAÇÃO','Gravação','Estúdio','03.2 DT INÍC GRAVAÇÃO','03.2 DT CONC GRAVAÇÃO','03.2 RESP GRAVAÇÃO'),
+  mk('V QUAL 1','Qualidade 1 (Vídeo)','Conteúdo','04.1 DT INÍC QUAL 1','04.1 DT CONC QUAL 1','04.1 RESP QUAL 1'),
+  mk('V EDT','Edição','Estúdio','06.1 DT INÍC EDT','06.1 DT CONC EDT','06.1 RESP EDT'),
+  mk('V EDT EXT','Edição externa','Estúdio','06.2 DT INÍC EDT EXT','06.2 DT CONC EDT EXT','06.2 RESP EDT EXT'),
+  mk('V QUAL 2','Qualidade 2 (Vídeo)','Conteúdo','07 DT INÍC QUAL 2','07 DT CONC QUAL 2','07 RESP QUAL 2')
+];
+let STAGE_MAP = STAGE_MAP_V1;
+// Semestres disponíveis. O PRIMEIRO é o mais recente e abre por padrão.
+const SEMESTERS=[
+  {id:'2027-1',label:'2027/1',profile:'v2',token:'27\\.1',sources:['dados_2027_1_conteudo.csv','dados_2027_1_video.csv']},
+  {id:'2026-2',label:'2026/2',profile:'v1',token:'2026\\.2',sources:['dados.csv']}
+];
 
 const PRODUCTION_LABELS = { BDQ:'Banco de questões' };
 const state = {
   raw:[], data:[], filtered:[], fileName:'', charts:{}, page:1, pageSize:25,
-  queryApplied:false, sourceMode:'', peopleInitialized:false
+  queryApplied:false, sourceMode:'', peopleInitialized:false, profile:'v1', semester:'', ignored:{fora:0,arq:0}
 };
 
 const el = id => document.getElementById(id);
@@ -40,7 +68,25 @@ const escapeHtml = s => clean(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;',
 const dayKey = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : '';
 const daysBetween = (a,b) => Math.max(0, Math.floor((b-a)/86400000));
 
+const nameLevel=n=>{const nu=norm(n);return /(^|[^A-Z0-9])POS(?=[A-Z]*\d|[^A-Z]|$)/.test(nu)?'Pós':/(^|[^A-Z0-9])GRD/.test(nu)?'Graduação':'Outros';};
+function parseCardNameV2(name=''){
+  const parts=clean(name).split('_').map(s=>s.trim()).filter(Boolean);
+  const codeIdx=parts.findIndex(p=>/^(AFYA|POSAFYA)\d+/i.test(p));
+  const kind=norm(parts[1]||''),u=parts[2]||'';
+  const unit=/^(U|V)\d+$/i.test(u)?u.toUpperCase():(/^PE$/i.test(u)?'PE':'');
+  const tags=(codeIdx>=0?parts.slice(codeIdx+1):[]).map(norm);
+  let production='';
+  if(kind==='BDQ') production='Banco de questões';
+  else if(tags.includes('POD')) production='Podcast';
+  else if(tags.includes('PEV')) production='Prática em evidência';
+  else if(tags.includes('EDUV')) production='Dúvida';
+  else if(unit==='PE') production='Plano de ensino';
+  else if(unit.startsWith('V')){const t=tags.find(x=>/^T\d+$/.test(x));production=t?`Vídeo de tema (${t})`:'Vídeo';}
+  else production='Conteúdo';
+  return { product:parts[0]||'', unit, production, code:codeIdx>=0?parts[codeIdx]:'', level:nameLevel(name), themes:(tags.find(x=>/^T\d+$/.test(x))||'') };
+}
 function parseCardName(name='') {
+  if(state.profile==='v2') return parseCardNameV2(name);
   const parts=clean(name).split('_').map(s=>s.trim()).filter(Boolean);
   const codeIdx=parts.findIndex(p=>/^(AFYA|POSAFYA)\d+/i.test(p));
   const unitIdx=parts.findIndex(p=>/^(U|V)\d+$/i.test(p));
@@ -69,12 +115,18 @@ function getArea(stage='') {
 
 function rawStatus(row){
   const list=norm(row['List Name']);
+  if(state.profile==='v2'){
+    if(/PUBLICADO|FINALIZ/.test(list)) return 'Finalizado';
+    if(truthy(row.Archived)||/ARQUIV/.test(list)) return 'Arquivado';
+    if(/^00 DEMANDA/.test(list)) return 'Backlog';
+    return 'Em andamento';
+  }
   // Regra de negócio: ao chegar em qualquer etapa de TESTER, a entrega já é considerada concluída.
   if(/FINALIZ|TESTER|TST\s*CONTEUDO/.test(list)) return 'Finalizado';
   if(truthy(row.Archived) || /ARQUIV/.test(list)) return 'Arquivado';
   return 'Em andamento';
 }
-function getStatus(row){ return rawStatus(row)==='Em andamento'?'Em andamento':'Finalizado'; }
+function getStatus(row){ const s=rawStatus(row); return (s==='Em andamento'||s==='Backlog')?s:'Finalizado'; }
 function isFinished(row){ return row.__status==='Finalizado'; }
 
 function splitPeople(v=''){ return clean(v).split(/[,;|]/).map(x=>x.trim()).filter(Boolean); }
@@ -87,12 +139,34 @@ function stageEvents(row){
     const person=clean(row[s.person]);
     let hours=null;
     if(start&&end){ const diff=(end-start)/3600000; if(diff>=0&&diff<24*180) hours=diff; }
-    return {...s,start,end,person,hours};
+    return {...s,start,end,person,hours:s.wait?null:hours};
   }).filter(e=>e.start||e.end||e.person);
 }
 
-function stageDefForList(listName=''){
+function stageDefV2(s,video){
+  const f=k=>STAGE_MAP.find(x=>x.key===k);
+  if(/PUBLICADO|FINALIZ|MODELOS|^00 DEMANDA/.test(s)) return null;
+  if(/AGUARD\w* GRAV/.test(s)) return f('V AGUARD GRAV');
+  if(/LIBERADO PARA VALID|LIB\w* VALID/.test(s)) return f('V LIB VALID');
+  if(/GRAVACAO/.test(s)) return f('V GRAVAÇÃO');
+  if(/EDICAO EXT|EDT EXT/.test(s)) return f('V EDT EXT');
+  if(/EDICAO|\bEDT\b/.test(s)) return f('V EDT');
+  if(/ROTEIRO/.test(s)) return f('V ROTEIRO');
+  if(/\bDG\b/.test(s)) return f('DG');
+  if(/\bWEB\b/.test(s)) return f('WEB');
+  if(/PENDENCIA/.test(s)) return f('PENDÊNCIA');
+  if(/REVISAO/.test(s)) return f('REV');
+  if(/\bDI\b/.test(s)) return f('DI');
+  if(/AGUARD\w* CONT/.test(s)) return f('AGUARD CONT');
+  if(/EXTRA 02/.test(s)) return f('EXTRA 02');
+  if(/EXTRA 01|EXTRA/.test(s)) return f('EXTRA 01');
+  if(/QUALIDADE 2|QUAL 2|QUAL2/.test(s)) return f(video?'V QUAL 2':'QUAL2');
+  if(/QUALIDADE 1|QUAL 1|QUAL1/.test(s)) return f(video?'V QUAL 1':'QUAL1');
+  return null;
+}
+function stageDefForList(listName='',row=null){
   const s=norm(listName);
+  if(state.profile==='v2') return stageDefV2(s,/VIDEO/.test(norm(row?.['Board Name'])));
   if(/TESTER CONTEUDO/.test(s)) return STAGE_MAP.find(x=>x.key==='TST CONTEÚDO');
   if(/\bWEB\b/.test(s)) return STAGE_MAP.find(x=>x.key==='WEB');
   if(/EDICAO/.test(s)) return STAGE_MAP.find(x=>x.key==='EDIÇÃO');
@@ -111,7 +185,8 @@ function stageDefForList(listName=''){
 
 function stageMode(listName=''){
   const s=norm(listName);
-  if(/FINALIZ|ARQUIV/.test(s)) return 'Finalizado';
+  if(/FINALIZ|ARQUIV|PUBLICADO/.test(s)) return 'Finalizado';
+  if(state.profile==='v2'&&/LIBERADO PARA VALID|AGUARD/.test(s)) return 'Fila';
   if(/VALIDACAO|TESTER CONTEUDO/.test(s)) return 'Validação';
   if(/\|\s*PRODUCAO|\|\s*PROD\b/.test(s)) return 'Produção';
   return 'Fila';
@@ -120,7 +195,7 @@ function stageMode(listName=''){
 function currentStageInfo(row){
   const list=clean(row['List Name'])||'Sem etapa';
   if(isFinished(row)) return { list:'Finalizados', mode:'Finalizado', start:null, end:null, person:'', def:null, movement:row.__activityDate, days:0, issues:[] };
-  const def=stageDefForList(list);
+  const def=stageDefForList(list,row);
   const start=def?parseDate(row[def.start]):null;
   const end=def?parseDate(row[def.end]):null;
   const person=def?clean(row[def.person]):'';
@@ -150,6 +225,8 @@ function enrich(row){
   const activityDate=lastActivity||(dates.length?new Date(Math.max(...dates.map(d=>d.getTime()))):null);
   const base={...row,__parsed:parsed,__events:events,__people:people,__labels:labels,__area:getArea(row['List Name']),__rawStatus:rawStatus(row),__status:getStatus(row),__hours:totalHours,__durationCount:validDurations.length,__activityDate:activityDate};
   base.__current=currentStageInfo(base);
+  base.__board=state.profile==='v2'?(/VIDEO/.test(norm(row['Board Name']))?'Vídeo':'Conteúdo'):(clean(row['Board Name'])||'—');
+  if(state.profile==='v2') base.__area=isFinished(base)?'Outros':(base.__current.def?.area||(base.__board==='Vídeo'?'Estúdio':'Conteúdo'));
   return base;
 }
 
@@ -166,10 +243,28 @@ function setLastUpdate(value,sourceMode='server'){
 function loadCSVFile(file){
   if(!file)return;
   showToast('Lendo CSV...');
-  Papa.parse(file,{header:true,skipEmptyLines:'greedy',dynamicTyping:false,complete:r=>{setLastUpdate(file.lastModified?new Date(file.lastModified):new Date(),'manual');onParsed(r.data,file.name,'manual')},error:e=>showToast(`Erro ao ler CSV: ${e.message}`)});
+  Papa.parse(file,{header:true,skipEmptyLines:'greedy',dynamicTyping:false,complete:r=>{setLastUpdate(file.lastModified?new Date(file.lastModified):new Date(),'manual');onParsed(r.data,file.name,'manual',state.profile)},error:e=>showToast(`Erro ao ler CSV: ${e.message}`)});
 }
 
-function onParsed(rows,fileName='base.csv',sourceMode='manual'){
+function prepareV2(rows){
+  const tok=(SEMESTERS.find(s=>s.id===state.semester)||{}).token||'\\d{2}\\.\\d';
+  const std=new RegExp(`^[A-Z]{3}${tok}_(CONTEUDO|VIDEO|ESTUDIO|BDQ)_(U\\d+|V\\d+|PE)_`);
+  const hasProd=r=>STAGE_MAP.some(s=>clean(r[s.start])||clean(r[s.end]));
+  let fora=0,arq=0;
+  const out=rows.map(r=>Object.fromEntries(Object.entries(r).map(([k,v])=>[k.replace(/\s+/g,' ').trim(),v]))).filter(r=>{
+    if(!clean(r['Card Name'])&&!clean(r['Card ID']))return false;
+    if(/MODELOS/.test(norm(r['List Name']))||!std.test(norm(r['Card Name']))){fora++;return false;}
+    if(truthy(r.Archived)&&!hasProd(r)){arq++;return false;}
+    return true;
+  });
+  state.ignored={fora,arq};
+  return out;
+}
+function onParsed(rows,fileName='base.csv',sourceMode='manual',profile){
+  state.profile=profile||state.profile||'v1'; STAGE_MAP=state.profile==='v2'?STAGE_MAP_V2:STAGE_MAP_V1;
+  if(state.profile==='v2') rows=prepareV2(rows); else state.ignored={fora:0,arq:0};
+  el('personPeople').dataset.ready='';el('availStage').dataset.n='';
+  if(state.loadedSem!==state.semester){state.loadedSem=state.semester;state.peopleInitialized=false;el('productivityPeople').innerHTML='';}
   state.raw=rows;
   state.data=rows.filter(r=>clean(r['Card Name'])||clean(r['Card ID'])).map(enrich);
   state.fileName=fileName; state.sourceMode=sourceMode;
@@ -180,7 +275,8 @@ function onParsed(rows,fileName='base.csv',sourceMode='manual'){
   applyQueryFilters();
   initProductivityPeriod();
   applyFilters();
-  el('pageSubtitle').textContent=`${num(state.data.length)} cards carregados · filtros e gráficos atualizados em tempo real.`;
+  const sem=SEMESTERS.find(s=>s.id===state.semester),ig=state.ignored;
+  el('pageSubtitle').textContent=`${sem?sem.label+' · ':''}${num(state.data.length)} cards carregados${ig.fora||ig.arq?` · ignorados: ${num(ig.fora)} modelos/fora do padrão e ${num(ig.arq)} arquivados sem produção`:''}.`;
   showToast(`${num(state.data.length)} cards carregados`);
 }
 
@@ -191,7 +287,8 @@ function setOptions(id,values,placeholder){
 }
 
 function populateFilters(){
-  setOptions('filterStatus',['Em andamento','Finalizado'],'Todos');
+  setOptions('filterStatus',state.profile==='v2'?['Backlog','Em andamento','Finalizado']:['Em andamento','Finalizado'],'Todos');
+  setOptions('filterBoard',state.data.map(r=>r.__board),'Todos');
   setOptions('filterArea',state.data.map(r=>r.__area),'Todas');
   setOptions('filterStage',state.data.map(r=>clean(r['List Name'])),'Todas');
   setOptions('filterResponsible',state.data.flatMap(r=>r.__people),'Todos');
@@ -211,7 +308,7 @@ function applyQueryFilters(){
   state.queryApplied=true;
 }
 
-function filters(){ return {search:norm(el('filterSearch').value),status:el('filterStatus').value,area:el('filterArea').value,stage:el('filterStage').value,responsible:el('filterResponsible').value,label:el('filterLabel').value,level:el('filterLevel').value,product:el('filterProduct').value,unit:el('filterUnit').value,production:el('filterProduction').value,code:el('filterCode').value,start:el('filterStart').value,end:el('filterEnd').value}; }
+function filters(){ return {search:norm(el('filterSearch').value),status:el('filterStatus').value,area:el('filterArea').value,stage:el('filterStage').value,responsible:el('filterResponsible').value,label:el('filterLabel').value,level:el('filterLevel').value,board:el('filterBoard').value,product:el('filterProduct').value,unit:el('filterUnit').value,production:el('filterProduction').value,code:el('filterCode').value,start:el('filterStart').value,end:el('filterEnd').value}; }
 
 function eventMatchesContext(e,f){
   if(f.responsible && !splitPeople(e.person).some(p=>norm(p)===norm(f.responsible))) return false;
@@ -251,6 +348,7 @@ function applyFilters(){
     if(f.responsible&&!r.__people.some(p=>norm(p)===norm(f.responsible)))return false;
     if(f.label&&!r.__labels.includes(f.label))return false;
     if(f.level&&r.__parsed.level!==f.level)return false;
+    if(f.board&&r.__board!==f.board)return false;
     if(f.product&&r.__parsed.product!==f.product)return false;
     if(f.unit&&r.__parsed.unit!==f.unit)return false;
     if(f.production&&r.__parsed.production!==f.production)return false;
@@ -312,12 +410,12 @@ function dateKeysBetween(start,end){
 
 function updateKpis(){
   const total=state.filtered.length,base=state.data.length;
-  const active=state.filtered.filter(r=>!isFinished(r)).length;
+  const active=state.filtered.filter(r=>r.__status==='Em andamento').length,backlog=state.filtered.filter(r=>r.__status==='Backlog').length;
   const finished=state.filtered.filter(isFinished).length;
   const events=filteredEvents().filter(e=>Number.isFinite(e.hours));
   const hours=events.reduce((s,e)=>s+e.hours,0),avg=events.length?hours/events.length:0;
   el('kpiTotal').textContent=num(total);el('kpiTotalHint').textContent=base?`${Math.round(total/base*100)}% da base`:'0% da base';
-  el('kpiActive').textContent=num(active);el('kpiActiveHint').textContent=`${num(finished)} concluídos`;
+  el('kpiActive').textContent=num(active);el('kpiActiveHint').textContent=`${num(finished)} concluídos${backlog?` · ${num(backlog)} em backlog`:''}`;
   el('kpiFinished').textContent=num(finished);el('kpiFinishedHint').textContent=total?`${Math.round(finished/total*100)}% do recorte`:'0% do recorte';
   el('kpiHours').textContent=fmtHours(hours);el('kpiHoursHint').textContent=`${num(events.length)} participações com duração válida`;
   el('kpiAvg').textContent=fmtHours(avg);el('kpiAvgHint').textContent='Média das etapas concluídas';
@@ -658,7 +756,7 @@ function exportProductivitySlide(){
   canvasText(ctx,`Base: ${el('sidebarFileName').textContent||'dados.csv'} · ${el('lastUpdate').textContent||''}`,58,1052,16,'600','#6d7280');canvasText(ctx,'Ensino Digital · Painel de produção',1862,1052,16,'700','#6d7280','right');
   c.toBlob(blob=>{if(!blob)return showToast('Não foi possível gerar a imagem');const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`produtividade_${(who||'equipe').replace(/[^a-z0-9_-]+/gi,'_')}_${el('productivityStart').value||'inicio'}_${el('productivityEnd').value||'fim'}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);showToast('Slide 16:9 exportado em PNG com leitura ampliada');},'image/png');
 }
-function resetFilters(){['filterSearch','filterStatus','filterArea','filterStage','filterResponsible','filterLabel','filterLevel','filterProduct','filterUnit','filterProduction','filterCode','filterStart','filterEnd'].forEach(id=>el(id).value='');applyFilters();}
+function resetFilters(){['filterSearch','filterStatus','filterArea','filterStage','filterResponsible','filterLabel','filterLevel','filterBoard','filterProduct','filterUnit','filterProduction','filterCode','filterStart','filterEnd'].forEach(id=>el(id).value='');applyFilters();}
 function downloadCsv(rows,name){const csv=Papa.unparse(rows),blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
 function exportFiltered(){if(!state.filtered.length)return showToast('Nenhum registro para exportar');const rows=state.filtered.map(r=>{const o={};Object.keys(state.raw[0]||{}).forEach(k=>o[k]=r[k]);return o;});downloadCsv(rows,'cards_filtrados.csv');}
 function showToast(msg){const t=el('toast');t.textContent=msg;t.classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>t.classList.remove('show'),2500);}
@@ -818,6 +916,7 @@ function wireEvents(){
   el('clearPeople').addEventListener('click',()=>{el('productivityPeople').querySelectorAll('input').forEach(i=>i.checked=false);renderProductivity();});
   el('exportProductivityData').addEventListener('click',exportProductivityData);el('exportProductivitySlide').addEventListener('click',exportProductivitySlide);
   wireQuickRanges();
+  el('semSwitch').addEventListener('click',ev=>{const b=ev.target.closest('button[data-sem]');if(!b||b.dataset.sem===state.semester)return;resetFilters();loadSemester(b.dataset.sem);});
   el('toggleAvail').addEventListener('click',()=>{const p=el('availPanel');p.hidden=!p.hidden;el('toggleAvail').textContent=p.hidden?'Ver disponíveis na etapa':'Ocultar disponíveis';if(!p.hidden){renderAvail();p.scrollIntoView({behavior:'smooth',block:'nearest'});}});
   ['availStage','availLevel'].forEach(id=>el(id).addEventListener('change',()=>{if(id==='availLevel')el('availStage').dataset.n='';renderAvail();}));
   ['personStart','personEnd'].forEach(id=>el(id).addEventListener('change',renderPerson));
@@ -832,9 +931,21 @@ function wireEvents(){
 async function loadCSVFromUrl(src,label='dados.csv',sourceMode='server'){
   const sep=src.includes('?')?'&':'?',url=`${src}${sep}_=${Date.now()}`;const res=await fetch(url,{cache:'no-store'});if(!res.ok)throw new Error(`HTTP ${res.status}`);const text=await res.text();const modified=res.headers.get('Last-Modified');setLastUpdate(modified?new Date(modified):new Date(),sourceMode);Papa.parse(text,{header:true,skipEmptyLines:'greedy',complete:r=>onParsed(r.data,label,sourceMode),error:e=>{throw e;}});
 }
+const fetchCsv=src=>new Promise(async(res,rej)=>{try{const sep=src.includes('?')?'&':'?',r=await fetch(`${src}${sep}_=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(`${src}: HTTP ${r.status}`);const text=await r.text(),m=r.headers.get('Last-Modified');Papa.parse(text,{header:true,skipEmptyLines:'greedy',complete:x=>res({rows:x.data,modified:m?new Date(m):new Date()}),error:rej});}catch(e){rej(e)}});
+function renderSemSwitch(){el('semSwitch').innerHTML=SEMESTERS.map(s=>`<button type="button" data-sem="${s.id}" class="${s.id===state.semester?'on':''}">${s.label}</button>`).join('');}
+async function loadSemester(id){
+  const sem=SEMESTERS.find(s=>s.id===id)||SEMESTERS[0];
+  state.semester=sem.id;state.profile=sem.profile;STAGE_MAP=sem.profile==='v2'?STAGE_MAP_V2:STAGE_MAP_V1;renderSemSwitch();
+  const res=await Promise.allSettled(sem.sources.map(fetchCsv)),ok=res.filter(r=>r.status==='fulfilled').map(r=>r.value);
+  if(!ok.length){el('dropzone').classList.remove('loaded');el('dropzone').querySelector('strong').textContent=`Dados de ${sem.label} não encontrados`;el('dropzone').querySelector('span').textContent=`Coloque ${sem.sources.join(' e ')} na mesma pasta do index.html.`;return;}
+  setLastUpdate(new Date(Math.max(...ok.map(x=>x.modified.getTime()))),'server');
+  onParsed(ok.flatMap(x=>x.rows),sem.sources.join(' + '),'server',sem.profile);
+  const bad=res.filter(r=>r.status==='rejected');if(bad.length)showToast(`Fonte indisponível: ${bad.map(b=>b.reason?.message||'erro').join('; ')}`);
+}
 async function autoLoadData(){
-  const p=new URLSearchParams(location.search),querySrc=p.get('csv'),src=querySrc||'dados.csv',label=querySrc?(querySrc.split('/').pop()?.split('?')[0]||'dados.csv'):'dados.csv';
-  try{await loadCSVFromUrl(src,label,'server');}catch(e){console.warn('Falha no carregamento automático do CSV:',e);el('dropzone').classList.remove('loaded');el('dropzone').querySelector('strong').textContent='dados.csv não encontrado';el('dropzone').querySelector('span').textContent='Coloque o arquivo dados.csv na mesma pasta do index.html ou carregue um CSV manualmente.';showToast('Não foi possível carregar dados.csv automaticamente.');}
+  const p=new URLSearchParams(location.search),q=p.get('csv');
+  if(q){try{state.profile='v1';await loadCSVFromUrl(q,q.split('/').pop()?.split('?')[0]||'dados.csv','server');}catch(e){console.warn('Falha no carregamento do CSV:',e);}return;}
+  await loadSemester(state.semester||p.get('sem')||SEMESTERS[0].id);
 }
 
 Chart.defaults.font.family='Inter, system-ui, sans-serif';Chart.defaults.color='#696d77';

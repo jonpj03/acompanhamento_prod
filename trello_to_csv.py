@@ -4,7 +4,12 @@ Segredos via variáveis de ambiente: TRELLO_KEY, TRELLO_TOKEN (obrigatórias) e 
 import csv, io, json, os, re, sys, time, unicodedata, urllib.parse, urllib.request, urllib.error
 
 BOARD_DEFAULT = "6941bd5f6a0cbffdabdd0228"   # ESTEIRA PRODUÇÃO DISCIPLINAS
-OUT = os.environ.get("OUT_CSV", "dados.csv")
+# Quadros sincronizados: (id do quadro, arquivo de saída, permite plano B pela API?)
+BOARDS = [
+    (os.environ.get("TRELLO_BOARD_ID") or BOARD_DEFAULT, "dados.csv", True),                                       # 2026/2
+    (os.environ.get("TRELLO_BOARD_ID_2027_CONT") or "6ae4e187770d8e9c566fedee", "dados_2027_1_conteudo.csv", False),  # 2027/1 Conteúdo
+    (os.environ.get("TRELLO_BOARD_ID_2027_VIDEO") or "6aecdd7b7edc6c3d65c9bbf5", "dados_2027_1_video.csv", False),   # 2027/1 Vídeo
+]
 API = "https://api.trello.com/1"
 
 BASE_COLS = ["Card ID","Card Name","Card URL","Card Description","Labels","Members","Due Date","Attachment Count",
@@ -117,15 +122,13 @@ def try_csv_export(bid):
         print(f"Export CSV indisponível com chave/token ({type(e).__name__}: {e}). Usando a API.")
     return None
 
-def main():
-    for k in ("TRELLO_KEY", "TRELLO_TOKEN"):
-        if not os.environ.get(k): sys.exit(f"Variável {k} não definida")
-    bid = os.environ.get("TRELLO_BOARD_ID") or BOARD_DEFAULT
+def sync(bid, out, allow_api):
+    print(f"\n=== {out} (quadro {bid}) ===")
     got = try_csv_export(bid)
     if got:
         cols, rows = got
         print(f"Fonte: export CSV nativo do Trello ({len(rows)} cards)")
-    else:
+    elif allow_api:
         board = get(f"/boards/{bid}", fields="id,name")
         lists = get(f"/boards/{bid}/lists", filter="all", fields="name")
         fields = get(f"/boards/{bid}/customFields")
@@ -136,22 +139,32 @@ def main():
         rows = build_rows(fetch_all_cards(bid), lists, fields, board)
         cols = COLS
         print(f"Fonte: API ({len(rows)} cards)")
+    else:
+        print("Abortado: export CSV indisponível e este quadro não tem plano B pela API. Arquivo NÃO alterado.")
+        return False
     old = old_dt = 0
-    dt = [c for c in cols if c.startswith("DT ")]
-    if os.path.exists(OUT):
-        with open(OUT, encoding="utf-8-sig", newline="") as f:
+    dt = [c for c in cols if re.search(r"\bDT\b", c)]
+    if os.path.exists(out):
+        with open(out, encoding="utf-8-sig", newline="") as f:
             for r in csv.DictReader(f):
                 old += 1; old_dt += sum(1 for c in dt if r.get(c))
     new_dt = sum(1 for r in rows for c in dt if r.get(c))
     print(f"Cards: novo={len(rows)} atual={old} | Datas de etapas: novo={new_dt} atual={old_dt}")
     if len(rows) < 50 or (old and len(rows) < old * 0.7):
-        sys.exit("Abortado: poucos cards baixados. dados.csv NÃO foi alterado.")
+        print("Abortado: poucos cards baixados. Arquivo NÃO alterado."); return False
     if old_dt and new_dt < old_dt * 0.7:
-        sys.exit("Abortado: as datas das etapas (DT ...) não vieram. dados.csv NÃO foi alterado. Envie o log para diagnóstico.")
+        print("Abortado: as datas das etapas (DT ...) não vieram. Arquivo NÃO alterado."); return False
     rows.sort(key=lambda r: r["Card ID"])
-    with open(OUT, "w", encoding="utf-8", newline="") as f:
+    with open(out, "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore"); w.writeheader(); w.writerows(rows)
-    print(f"OK: {len(rows)} cards gravados em {OUT}")
+    print(f"OK: {len(rows)} cards gravados em {out}")
+    return True
+
+def main():
+    for k in ("TRELLO_KEY", "TRELLO_TOKEN"):
+        if not os.environ.get(k): sys.exit(f"Variável {k} não definida")
+    results = [sync(*b) for b in BOARDS]   # um quadro com problema não impede os outros
+    if not all(results): sys.exit("Atenção: pelo menos um quadro não foi atualizado (veja o log acima).")
 
 if __name__ == "__main__":
     main()
