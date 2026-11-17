@@ -1,0 +1,36 @@
+name: Atualizar dados do Trello
+
+on:
+  schedule:
+    - cron: "0 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: atualizar-trello
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Baixar cards do Trello e gerar dados.csv
+        env:
+          TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
+        run: python trello_to_csv.py
+      - name: Publicar se houve mudança
+        run: |
+          if git diff --quiet -- dados.csv; then echo "Sem mudanças"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dados.csv
+          git commit -m "Atualiza dados.csv do Trello ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+          git push
