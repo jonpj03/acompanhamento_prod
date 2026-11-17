@@ -131,29 +131,34 @@
 
       <section class="view active" id="view-overview">
         <div class="kpis" id="kpis">
+          <article class="kpi"><span>Disciplinas</span><strong id="kpiDisc">0</strong><small id="kpiDiscHint">no recorte</small></article>
           <article class="kpi"><span>Cards filtrados</span><strong id="kpiTotal">0</strong><small id="kpiTotalHint">0% da base</small></article>
           <article class="kpi"><span>Em andamento</span><strong id="kpiActive">0</strong><small id="kpiActiveHint">0 ativos</small></article>
           <article class="kpi"><span>Finalizados</span><strong id="kpiFinished">0</strong><small id="kpiFinishedHint">0% do recorte</small></article>
           <article class="kpi"><span>Minutos registrados</span><strong id="kpiHours">0 min</strong><small id="kpiHoursHint">Soma das etapas</small></article>
-          <article class="kpi"><span>Tempo médio / etapa</span><strong id="kpiAvg">0h</strong><small id="kpiAvgHint">Etapas com início e fim</small></article>
+          <article class="kpi"><span>Tempo médio / etapa</span><strong id="kpiAvg">0 min</strong><small id="kpiAvgHint">Etapas com início e fim</small></article>
         </div>
 
         <div class="dashboard-grid">
           <article class="panel span-2">
-            <div class="panel-head"><div><h2>Cards por etapa atual</h2><p>Distribuição do recorte filtrado</p></div></div>
-            <div class="chart-wrap"><canvas id="chartStages"></canvas></div>
+            <div class="panel-head"><div><h2>Demandas finalizadas por etapa</h2><p>Cards com a etapa concluída · % sobre os cards do recorte</p></div></div>
+            <div class="chart-wrap" id="funnelWrap"><canvas id="chartFunnel"></canvas></div>
           </article>
           <article class="panel">
-            <div class="panel-head"><div><h2>Distribuição por área</h2><p>Conteúdo, Estúdio e Outros</p></div></div>
-            <div class="chart-wrap donut"><canvas id="chartArea"></canvas></div>
+            <div class="panel-head"><div><h2>Onde estão agora</h2><p>Cards por etapa atual</p></div></div>
+            <div class="chart-wrap" id="stagesWrap"><canvas id="chartStages"></canvas></div>
           </article>
-          <article class="panel span-2">
-            <div class="panel-head"><div><h2>Minutos por responsável</h2><p>Top 10 no recorte atual</p></div></div>
-            <div class="chart-wrap"><canvas id="chartHours"></canvas></div>
+          <article class="panel span-3">
+            <div class="panel-head"><div><h2>Finalizadas por etapa e unidade</h2><p>Quantidade de cards concluídos em cada etapa, separada por unidade/vídeo</p></div></div>
+            <div class="chart-wrap" id="unitStackWrap"><canvas id="chartUnitStack"></canvas></div>
           </article>
-          <article class="panel">
-            <div class="panel-head"><div><h2>Leitura rápida</h2><p>Principais sinais do recorte</p></div></div>
-            <div class="insights" id="quickInsights"></div>
+          <article class="panel span-3">
+            <div class="panel-head"><div><h2>Quadro de finalizações</h2><p>% de cards de cada unidade/vídeo que já concluíram a etapa</p></div></div>
+            <div class="table-scroll"><table class="bi-table"><thead id="quadroHead"></thead><tbody id="quadroBody"></tbody></table></div>
+          </article>
+          <article class="panel span-3">
+            <div class="panel-head"><div><h2>Demandas e tipos finalizados por etapa</h2><p>Clique na unidade para abrir ou fechar os tipos</p></div></div>
+            <div class="table-scroll"><table class="bi-table"><thead id="matrixHead"></thead><tbody id="matrixBody"></tbody></table></div>
           </article>
           <article class="panel span-3">
             <div class="panel-head"><div><h2>Produção ao longo do tempo</h2><p id="timelineSubtitle">Etapas concluídas por dia · mês atual</p></div></div>

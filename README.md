@@ -188,3 +188,8 @@ Na tabela **Quem está tratando cada demanda**, são exibidas apenas demandas co
   - Tipos: `U#` Unidade, `V#` Vídeo, `BDQ`, `PE` Plano de ensino. Formato (filtro *Produção*): Podcast (`POD`), Prática em evidência (`PEV`), Dúvida (`EDUV`), Vídeo de tema (`T#`).
   - Áreas: Qualidade 1/2, DI e Revisão = Conteúdo (inclusive no quadro Vídeo); DG, Roteiro, Gravação e Edição = Estúdio; Web = Web; Pendência e Extras = Outros. **Auditorias não entram** nas métricas. Etapas de espera não geram minutos.
 - **Robô**: `scripts/trello_to_csv.py` sincroniza os 3 quadros (2026/2, 2027/1 Conteúdo e 2027/1 Vídeo). Os IDs estão no script e podem ser sobrescritos por `TRELLO_BOARD_ID_2027_CONT` e `TRELLO_BOARD_ID_2027_VIDEO`. Um quadro com problema não impede a atualização dos outros.
+
+
+## Atualização v4 — Visão geral no estilo BI
+
+A Visão geral agora traz: indicadores (com **Disciplinas**), **funil de demandas finalizadas por etapa** (% sobre os cards do recorte), **onde estão agora** (cards por etapa atual), **barras empilhadas por etapa e unidade**, **quadro de finalizações** (% de cada unidade/vídeo que concluiu a etapa) e **matriz demanda/tipo × etapa** (clique na unidade para abrir os tipos). "Produção ao longo do tempo" foi mantida. Saíram da Visão geral: distribuição por área, minutos por responsável (continua em Produtividade) e leitura rápida. "Finalizada na etapa" = card com a data de conclusão da etapa preenchida; respeita todos os filtros e o período.

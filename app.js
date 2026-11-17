@@ -360,7 +360,7 @@ function applyFilters(){
   updateAll();
 }
 
-function updateAll(){ updateFilterSummary();updateKpis();updateCharts();renderTable();renderInsights();renderPipeline();renderProductivity();if(el('view-person').classList.contains('active'))renderPerson(); }
+function updateAll(){ updateFilterSummary();updateKpis();updateCharts();renderOverviewBI();renderTable();renderPipeline();renderProductivity();if(el('view-person').classList.contains('active'))renderPerson(); }
 function updateFilterSummary(){const f=filters();const c=Object.values(f).filter(Boolean).length;el('filterSummary').textContent=c?`${c} filtro${c>1?'s':''} aplicado${c>1?'s':''} · ${num(state.filtered.length)} cards`:`${num(state.filtered.length)} cards · nenhum filtro aplicado`;}
 
 function personEvents(rows=state.filtered){
@@ -414,6 +414,7 @@ function updateKpis(){
   const finished=state.filtered.filter(isFinished).length;
   const events=filteredEvents().filter(e=>Number.isFinite(e.hours));
   const hours=events.reduce((s,e)=>s+e.hours,0),avg=events.length?hours/events.length:0;
+  el('kpiDisc').textContent=num(new Set(state.filtered.map(r=>r.__parsed.code).filter(Boolean)).size);el('kpiDiscHint').textContent=`${num(new Set(state.data.map(r=>r.__parsed.code).filter(Boolean)).size)} na base`;
   el('kpiTotal').textContent=num(total);el('kpiTotalHint').textContent=base?`${Math.round(total/base*100)}% da base`:'0% da base';
   el('kpiActive').textContent=num(active);el('kpiActiveHint').textContent=`${num(finished)} concluídos${backlog?` · ${num(backlog)} em backlog`:''}`;
   el('kpiFinished').textContent=num(finished);el('kpiFinishedHint').textContent=total?`${Math.round(finished/total*100)}% do recorte`:'0% do recorte';
@@ -454,16 +455,61 @@ const chartDefaults={
   scales:{x:{grid:{display:false},ticks:{color:'#777b86',font:{size:10}}},y:{grid:{color:'#eeeeF1'},ticks:{color:'#777b86',font:{size:10}}}}
 };
 
+
+// ==============================
+// VISÃO GERAL NO ESTILO BI
+// ==============================
+function overviewData(){
+  const f=filters(),s=f.start?new Date(f.start+'T00:00:00'):null,e=f.end?new Date(f.end+'T23:59:59.999'):null;
+  const stages=STAGE_MAP.filter(x=>!x.wait),done=new Map(stages.map(x=>[x.key,new Map()]));
+  state.filtered.forEach(r=>r.__events.forEach(ev=>{
+    if(!ev.end||ev.wait||!done.has(ev.key))return;
+    if(s&&ev.end<s)return;if(e&&ev.end>e)return;
+    done.get(ev.key).set(r['Card ID']||r['Card Name'],r);
+  }));
+  return {stages:stages.filter(x=>done.get(x.key).size>0),done};
+}
+function renderOverviewBI(){
+  const {stages,done}=overviewData(),total=state.filtered.length||1;
+  const unitOf=r=>r.__parsed.unit||'—',typeOf=r=>r.__parsed.production||'Sem tipo';
+  const units=unique(stages.flatMap(s=>[...done.get(s.key).values()].map(unitOf))).sort((x,y)=>(x==='—')-(y==='—'));
+  const unitTotal=new Map();state.filtered.forEach(r=>{const u=unitOf(r);unitTotal.set(u,(unitTotal.get(u)||0)+1);});
+  const fit=(id,n,min=240,px=34)=>{const w=el(id);if(w)w.style.height=Math.max(min,n*px+60)+'px';};
+  const noAxis={x:{stacked:true,display:false},y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}};
+  // 1) Funil
+  const vals=stages.map(s=>done.get(s.key).size),max=Math.max(...vals,1);fit('funnelWrap',stages.length);
+  createChart('chartFunnel',{type:'bar',data:{labels:stages.map(s=>s.label),datasets:[
+    {data:vals.map(v=>(max-v)/2),backgroundColor:'transparent',datalabels:{display:false}},
+    {data:vals,backgroundColor:ACCENT,borderRadius:4,datalabels:{color:'#fff',anchor:'center',align:'center',display:ctx=>ctx.dataset.data[ctx.dataIndex]>0,formatter:v=>`${num(v)} (${(v/total*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%)`}}]},
+    options:{...chartDefaults,indexAxis:'y',plugins:{...chartDefaults.plugins,tooltip:{filter:i=>i.datasetIndex===1}},scales:noAxis}});
+  // 2) Barras empilhadas por unidade
+  const cols=palette(units.length);fit('unitStackWrap',stages.length,260,30);
+  createChart('chartUnitStack',{type:'bar',data:{labels:stages.map(s=>s.label),datasets:units.map((u,i)=>({label:u,data:stages.map(s=>[...done.get(s.key).values()].filter(r=>unitOf(r)===u).length),backgroundColor:cols[i],datalabels:{color:'#fff',anchor:'center',align:'center'}}))},
+    options:{...chartDefaults,indexAxis:'y',plugins:{...chartDefaults.plugins,legend:{display:true,position:'bottom',labels:{boxWidth:10,usePointStyle:true,font:{size:10}}}},scales:noAxis}});
+  // 3) Quadro de finalizações (%)
+  const pct=(n,d)=>d?n/d:0,heat=p=>`background:rgba(213,24,98,${(.06+.5*p).toFixed(2)})`;
+  el('quadroHead').innerHTML=`<tr><th>Etapa</th>${units.map(u=>`<th>${escapeHtml(u)}</th>`).join('')}<th>Total</th></tr>`;
+  el('quadroBody').innerHTML=stages.length?stages.map(s=>{const m=[...done.get(s.key).values()];
+    return `<tr><td>${escapeHtml(s.label)}</td>${units.map(u=>{const n=m.filter(r=>unitOf(r)===u).length,p=pct(n,unitTotal.get(u));return `<td class="${n?'':'zero'}" style="${n?heat(p):''}" title="${num(n)} de ${num(unitTotal.get(u)||0)}">${Math.round(p*100)}%</td>`;}).join('')}<td style="${heat(pct(m.length,total))}"><strong>${Math.round(pct(m.length,total)*100)}%</strong></td></tr>`;}).join(''):'<tr><td colspan="9" class="empty">Nenhuma etapa concluída no recorte.</td></tr>';
+  // 4) Matriz unidade > tipo x etapa
+  const cell=(n)=>`<td class="${n?'':'zero'}">${n?num(n):'·'}</td>`;
+  el('matrixHead').innerHTML=`<tr><th>Demanda / tipo</th>${stages.map(s=>`<th>${escapeHtml(s.label)}</th>`).join('')}</tr>`;
+  let body='';
+  units.forEach((u,i)=>{
+    const rowsU=stages.map(s=>[...done.get(s.key).values()].filter(r=>unitOf(r)===u));
+    const types=unique(rowsU.flat().map(typeOf));
+    body+=`<tr class="mx-unit" data-u="${escapeHtml(u)}"><td>${i===0?'▾':'▸'} ${escapeHtml(u)}</td>${rowsU.map(a=>cell(a.length)).join('')}</tr>`;
+    types.forEach(t=>{body+=`<tr class="mx-type${i===0?'':' hide'}" data-p="${escapeHtml(u)}"><td>${escapeHtml(t)}</td>${rowsU.map(a=>cell(a.filter(r=>typeOf(r)===t).length)).join('')}</tr>`;});
+  });
+  const mb=el('matrixBody');mb.innerHTML=body||'<tr><td class="empty">Nenhuma etapa concluída no recorte.</td></tr>';
+  mb.onclick=ev=>{const tr=ev.target.closest('tr.mx-unit');if(!tr)return;const u=tr.dataset.u,rows=[...mb.querySelectorAll('tr.mx-type')].filter(x=>x.dataset.p===u),open=rows.some(x=>x.classList.contains('hide'));rows.forEach(x=>x.classList.toggle('hide',!open));tr.firstElementChild.textContent=`${open?'▾':'▸'} ${u}`;};
+}
+
 function mergedStageName(r){ return isFinished(r)?'Finalizados':(clean(r['List Name'])||'Sem etapa'); }
 
 function updateCharts(){
   const stages=countBy(state.filtered,mergedStageName).slice(0,12);
   createChart('chartStages',{type:'bar',data:{labels:stages.map(x=>x[0]),datasets:[{data:stages.map(x=>x[1]),backgroundColor:ACCENT,borderRadius:5}]},options:{...chartDefaults,indexAxis:'y',scales:{x:{beginAtZero:true,grid:{color:'#eeeeF1'},ticks:{precision:0}},y:{grid:{display:false},ticks:{font:{size:9}}}}}});
-  const areas=countBy(state.filtered,r=>r.__area);
-  createChart('chartArea',{type:'doughnut',data:{labels:areas.map(x=>x[0]),datasets:[{data:areas.map(x=>x[1]),backgroundColor:palette(areas.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:9,usePointStyle:true,font:{size:10}}}}}});
-  const events=filteredEvents().filter(e=>Number.isFinite(e.hours)&&e.person);
-  const hrs=sumBy(events,e=>e.person,e=>e.hours).slice(0,10);
-  createChart('chartHours',{type:'bar',data:{labels:hrs.map(x=>x[0]),datasets:[{data:hrs.map(x=>Math.round(x[1]*60)),backgroundColor:'#5c6bc0',borderRadius:5}]},options:{...chartDefaults,indexAxis:'y',scales:{x:{beginAtZero:true,grid:{color:'#eeeeF1'},title:{display:true,text:'Horas'}},y:{grid:{display:false},ticks:{font:{size:9}}}}}});
   const {start:timelineStart,end:timelineEnd}=timelinePeriod();
   const timelineSubtitle=el('timelineSubtitle');
   if(timelineSubtitle){
@@ -478,13 +524,6 @@ function updateCharts(){
   createChart('chartTimeline',{type:'line',data:{labels:timeline.map(x=>fmtShortDate(new Date(x[0]+'T12:00:00'))),datasets:[{data:timeline.map(x=>x[1]),borderColor:ACCENT,backgroundColor:'rgba(213,24,98,.08)',fill:true,tension:.25,pointRadius:2}]},options:{...chartDefaults}});
 }
 
-function renderInsights(){
-  const out=[],total=state.filtered.length;if(!total){el('quickInsights').innerHTML='<div class="empty">Nenhum card no recorte atual.</div>';return;}
-  const top=countBy(state.filtered,mergedStageName)[0];if(top)out.push([`${top[0]} concentra mais cards`,`${num(top[1])} cards (${Math.round(top[1]/total*100)}% do recorte).`]);
-  const ev=filteredEvents().filter(e=>Number.isFinite(e.hours)&&e.person),th=sumBy(ev,e=>e.person,e=>e.hours)[0];if(th)out.push([`${th[0]} soma mais minutos`,`${fmtHours(th[1])} registradas nas etapas filtradas.`]);
-  const old=state.filtered.filter(r=>!isFinished(r)&&r.__activityDate).sort((a,b)=>a.__activityDate-b.__activityDate)[0];if(old)out.push(['Card ativo com atividade mais antiga',`${clean(old['Card Name']).slice(0,70)} · ${fmtDate(old.__activityDate)}.`]);
-  el('quickInsights').innerHTML=out.map(([a,b])=>`<div class="insight"><i class="insight-dot"></i><div><b>${escapeHtml(a)}</b><span>${escapeHtml(b)}</span></div></div>`).join('');
-}
 function macroProductionGroup(r){
   const unit=clean(r.__parsed.unit),production=clean(r.__parsed.production),isBdq=production==='Banco de questões'||/_BDQ_/i.test(clean(r['Card Name']));
   if(isBdq&&/^U\d+/i.test(unit))return{type:'Banco de questões',item:unit.toUpperCase(),order:3};

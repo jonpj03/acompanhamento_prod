@@ -65,7 +65,7 @@ button { cursor: pointer; }
 .field-search { grid-column: span 2; }
 .view { display: none; }
 .view.active { display: block; }
-.kpis { display: grid; grid-template-columns: repeat(5, minmax(145px, 1fr)); gap: 12px; margin-bottom: 15px; }
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(130px, 1fr)); gap: 12px; margin-bottom: 15px; }
 .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); min-height: 110px; }
 .kpi span, .kpi small { display: block; color: var(--muted); }
 .kpi span { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; font-weight: 800; }
@@ -271,3 +271,11 @@ tbody tr:hover { background: #fbf4f7; }
 .sem-switch{display:inline-flex;background:#f4f4f6;border-radius:11px;padding:3px;gap:2px}
 .sem-switch button{border:0;background:transparent;padding:8px 14px;border-radius:9px;font-size:12px;font-weight:800;color:#555b66;cursor:pointer}
 .sem-switch button.on{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+
+.bi-table{width:100%;border-collapse:collapse;font-size:12px}
+.bi-table th,.bi-table td{padding:7px 10px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+.bi-table th:first-child,.bi-table td:first-child{text-align:left;font-weight:700;position:sticky;left:0;background:#fff}
+.bi-table thead th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;background:#fafafb}
+.bi-table td.zero{color:#c3c6cf}
+.bi-table tr.mx-unit{cursor:pointer;background:#fbf3f6}.bi-table tr.mx-unit td:first-child{background:#fbf3f6;color:var(--accent)}
+.bi-table tr.mx-type td:first-child{padding-left:28px;font-weight:500}.bi-table tr.mx-type.hide{display:none}
